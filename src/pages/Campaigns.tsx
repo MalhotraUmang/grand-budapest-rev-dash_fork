@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { Plus, Play, Pause, Edit, RefreshCw } from "lucide-react";
+import { Plus, Play, Pause, Edit, RefreshCw, Search, Filter } from "lucide-react";
 import { Chatbot } from "@/components/Chatbot";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -20,7 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -35,6 +35,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Campaigns() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const { data, loading, refetch, appendData } = useGoogleSheets('Campaigns', 'A2:N');
   
   const [formData, setFormData] = useState({
@@ -70,6 +73,18 @@ export default function Campaigns() {
       messageTiming3: row[13] || '',
     }));
   }, [data]);
+  
+  const filteredCampaigns = campaigns.filter((campaign) => {
+    const matchesSearch =
+      campaign.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      campaign.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      campaign.targetCategory.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" || campaign.status === statusFilter;
+    const matchesCategory = categoryFilter === "all" || campaign.targetCategory === categoryFilter;
+    
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
   
   const handleCreateCampaign = async () => {
     const newId = `CP${String(campaigns.length + 1).padStart(3, '0')}`;
@@ -287,6 +302,55 @@ export default function Campaigns() {
       <Card className="shadow-elegant">
         <CardHeader>
           <CardTitle>Active & Scheduled Campaigns</CardTitle>
+          <div className="flex flex-col gap-4 mt-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search campaigns by ID, text or category..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2 items-center">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Campaign Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Scheduled">Scheduled</SelectItem>
+                  <SelectItem value="Paused">Paused</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Target Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="VIP">VIP</SelectItem>
+                  <SelectItem value="Business">Business</SelectItem>
+                  <SelectItem value="Regular">Regular</SelectItem>
+                </SelectContent>
+              </Select>
+              {(statusFilter !== "all" || categoryFilter !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setStatusFilter("all");
+                    setCategoryFilter("all");
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
@@ -311,7 +375,7 @@ export default function Campaigns() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaigns.map((campaign) => (
+                {filteredCampaigns.map((campaign) => (
                   <TableRow key={campaign.id}>
                     <TableCell className="font-medium">{campaign.id}</TableCell>
                     <TableCell className="min-w-[150px]">
