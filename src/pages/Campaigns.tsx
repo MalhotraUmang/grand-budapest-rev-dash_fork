@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Play, Pause, Edit } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Play, Pause, Edit, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -29,43 +29,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Mock data
-const mockCampaigns = [
-  {
-    id: "CP001",
-    text: "Exclusive Spa Weekend Offer",
-    targetCategory: "VIP",
-    startDateTime: "2025-01-15 09:00",
-    endDateTime: "2025-01-20 18:00",
-    targetCount: 45,
-    messageCount: 135,
-    status: "Active",
-  },
-  {
-    id: "CP002",
-    text: "Business Package Promotion",
-    targetCategory: "Business",
-    startDateTime: "2025-01-10 08:00",
-    endDateTime: "2025-01-25 20:00",
-    targetCount: 120,
-    messageCount: 240,
-    status: "Active",
-  },
-  {
-    id: "CP003",
-    text: "Summer Early Bird Special",
-    targetCategory: "Regular",
-    startDateTime: "2025-02-01 00:00",
-    endDateTime: "2025-02-28 23:59",
-    targetCount: 200,
-    messageCount: 0,
-    status: "Scheduled",
-  },
-];
+import { useGoogleSheets } from "@/hooks/useGoogleSheets";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Campaigns() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const { data, loading, refetch } = useGoogleSheets('Campaigns', 'A2:H');
+
+  const campaigns = useMemo(() => {
+    if (!data?.values) return [];
+    return data.values.map((row, index) => ({
+      id: row[0] || `CP${String(index + 1).padStart(3, '0')}`,
+      text: row[1] || '',
+      targetCategory: row[2] || '',
+      startDateTime: row[3] || '',
+      endDateTime: row[4] || '',
+      targetCount: parseInt(row[5]) || 0,
+      messageCount: parseInt(row[6]) || 0,
+      status: row[7] || 'Scheduled',
+    }));
+  }, [data]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -80,6 +63,26 @@ export default function Campaigns() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">Campaigns</h1>
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+          </CardHeader>
+          <CardContent>
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-16 w-full mb-2" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -89,14 +92,19 @@ export default function Campaigns() {
             Create and manage your marketing campaigns
           </p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-primary text-primary-foreground">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Campaign
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+        <div className="flex gap-2">
+          <Button onClick={refetch} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Sync
+          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-primary text-primary-foreground">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Campaign
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create New Campaign</DialogTitle>
               <DialogDescription>
@@ -163,6 +171,7 @@ export default function Campaigns() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card className="shadow-elegant">
@@ -186,7 +195,7 @@ export default function Campaigns() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockCampaigns.map((campaign) => (
+                {campaigns.map((campaign) => (
                   <TableRow key={campaign.id}>
                     <TableCell className="font-medium">{campaign.id}</TableCell>
                     <TableCell className="max-w-xs truncate">

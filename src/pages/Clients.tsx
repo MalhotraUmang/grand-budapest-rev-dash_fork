@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Download, Search } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Download, Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,45 +12,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-
-// Mock data - will be replaced with real Google Sheets data
-const mockClients = [
-  {
-    id: "CL001",
-    name: "John Smith",
-    email: "john.smith@email.com",
-    phone: "+1 234 567 8900",
-    type: "Premium",
-    interests: "Spa, Fine Dining",
-    traits: "High Spender, Frequent Visitor",
-    category: "VIP",
-  },
-  {
-    id: "CL002",
-    name: "Emma Johnson",
-    email: "emma.j@email.com",
-    phone: "+1 234 567 8901",
-    type: "Standard",
-    interests: "Room Service, Local Tours",
-    traits: "Budget Conscious",
-    category: "Regular",
-  },
-  {
-    id: "CL003",
-    name: "Michael Brown",
-    email: "m.brown@email.com",
-    phone: "+1 234 567 8902",
-    type: "Premium",
-    interests: "Conference Rooms, Business Center",
-    traits: "Corporate Client",
-    category: "Business",
-  },
-];
+import { useGoogleSheets } from "@/hooks/useGoogleSheets";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
+  const { data, loading, refetch } = useGoogleSheets('Clients', 'A2:H');
 
-  const filteredClients = mockClients.filter(
+  const clients = useMemo(() => {
+    if (!data?.values) return [];
+    return data.values.map((row, index) => ({
+      id: row[0] || `CL${String(index + 1).padStart(3, '0')}`,
+      name: row[1] || '',
+      email: row[2] || '',
+      phone: row[3] || '',
+      type: row[4] || '',
+      interests: row[5] || '',
+      traits: row[6] || '',
+      category: row[7] || '',
+    }));
+  }, [data]);
+
+  const filteredClients = clients.filter(
     (client) =>
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -82,6 +65,26 @@ export default function Clients() {
     a.click();
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">Clients</h1>
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-32" />
+          </CardHeader>
+          <CardContent>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-12 w-full mb-2" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -91,10 +94,16 @@ export default function Clients() {
             Manage and view all your client information
           </p>
         </div>
-        <Button onClick={downloadCSV} className="bg-primary hover:bg-primary/90">
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={refetch} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Sync
+          </Button>
+          <Button onClick={downloadCSV} className="bg-primary hover:bg-primary/90">
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-elegant">
