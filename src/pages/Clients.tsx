@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Download, Search, RefreshCw } from "lucide-react";
+import { Chatbot } from "@/components/Chatbot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
-  const { data, loading, refetch } = useGoogleSheets('Clients', 'A2:H');
+  const { data, loading, refetch } = useGoogleSheets('Clients', 'A2:L');
 
   const clients = useMemo(() => {
     if (!data?.values) return [];
@@ -26,10 +27,14 @@ export default function Clients() {
       name: row[1] || '',
       email: row[2] || '',
       phone: row[3] || '',
-      type: row[4] || '',
-      interests: row[5] || '',
-      traits: row[6] || '',
-      category: row[7] || '',
+      chatId: row[4] || '',
+      date: row[5] || '',
+      time: row[6] || '',
+      chatText: row[7] || '',
+      type: row[8] || '',
+      interests: row[9] || '',
+      traits: row[10] || '',
+      category: row[11] || '',
     }));
   }, [data]);
 
@@ -42,12 +47,16 @@ export default function Clients() {
   const downloadCSV = () => {
     // CSV export functionality - to be implemented
     const csv = [
-      ["Client ID", "Name", "Email", "Phone", "Type", "Interests", "Traits", "Category"],
+      ["Client ID", "Name", "Email", "Phone", "Chat ID", "Date", "Time", "Chat Text", "Type", "Interests", "Traits", "Category"],
       ...filteredClients.map((c) => [
         c.id,
         c.name,
         c.email,
         c.phone,
+        c.chatId,
+        c.date,
+        c.time,
+        c.chatText,
         c.type,
         c.interests,
         c.traits,
@@ -128,6 +137,10 @@ export default function Clients() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
+                  <TableHead>Chat ID</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead className="min-w-[200px]">Chat Text</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Interests</TableHead>
                   <TableHead>Traits</TableHead>
@@ -141,6 +154,14 @@ export default function Clients() {
                     <TableCell>{client.name}</TableCell>
                     <TableCell>{client.email}</TableCell>
                     <TableCell>{client.phone}</TableCell>
+                    <TableCell>{client.chatId}</TableCell>
+                    <TableCell className="text-sm">{client.date}</TableCell>
+                    <TableCell className="text-sm">{client.time}</TableCell>
+                    <TableCell className="min-w-[200px]">
+                      <div className="max-h-20 overflow-y-auto text-sm text-muted-foreground">
+                        {client.chatText}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={client.type === "Premium" ? "default" : "secondary"}
@@ -174,6 +195,7 @@ export default function Clients() {
           </div>
         </CardContent>
       </Card>
+      <Chatbot />
     </div>
   );
 }
